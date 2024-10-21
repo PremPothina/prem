@@ -1,0 +1,204 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site1.master.cs" Inherits="JIO_MART.Site1" %>
+
+<!DOCTYPE html>
+
+<html>
+<head runat="server">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <title>RN MART</title>
+    <style> 
+        #header {
+            color: #247BA0;
+            text-align: center;
+            font-size: 20px;
+        }
+        #nav {
+            background-color: #FF1654;
+            padding: 18px;
+        }
+        ul {
+            list-style-type: none;
+        }
+        li a {
+            color: #F1FAEE;
+            font-size: 15px;
+            column-width: 5%;
+        }
+        li {
+            display: inline;
+            padding-left: 2px;
+            column-width: 20px;
+        }
+        a {
+            text-decoration: none;
+            margin-left: 20px;
+        }
+        li a:hover {
+            background-color: #F3FFBD;
+            color: #FF1654;
+            padding: 1%;
+        }
+        #side {
+            text-align: center;
+            float: right;
+            width: 15%;
+            padding-bottom: 79%;
+            background-color: #F1FAEE;
+        }
+        #article {
+            background-color: #EEF5DB;
+            padding: 10px;
+            padding-bottom: 75%;
+        }
+        #footer {
+            background-color: #C7EFCF;
+            text-align: center;
+            padding-bottom: 5%;
+            font-size: 20px;
+        }
+        #con {
+            border: double;
+            border-color: burlywood;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 10px;
+            text-align: center; /* Align buttons to the center */
+        }
+        .image-item {
+            width: 100%;
+            height: 100px;
+            cursor: pointer;
+        }
+        #cart-button {
+            color:white;
+            font-size: 24px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        #cart-button:hover {
+            color:yellow;
+        }
+        #cart-button-container {       
+            text-align: right;
+            padding-right: 20px; 
+            margin-top: 10px; 
+        }
+        #footer {
+            clear: both; 
+        }
+        #cart-popup {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            width: 300px;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <form id="form1" runat="server">
+        <div id="header">
+            <h1>RN MART</h1>
+        </div>
+  <div id="nav">
+   <ul>
+    <li><a href="Home.aspx">Home</a></li>
+    <li><a href="Products_page.aspx">Products</a></li>
+    <li><a href="Items_page.aspx">Items</a></li>
+    <li style="float: right;">
+        <a id="cart-button" href="javascript:void(0);">
+            <i class="fas fa-shopping-cart"></i> Cart (0)
+        </a>
+    </li>
+</ul>
+
+             </div>
+        <div id="main-content">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server"></asp:ContentPlaceHolder>
+            <div class="image-grid">
+                <asp:Repeater ID="rptmainitems" runat="server">
+                    <ItemTemplate>
+                        <div>
+                            <a href="#" onclick="loadRelatedItems('<%# Eval("Main_item_id") %>'); return false;">
+                                <asp:Image ID="ImageButtonItem" runat="server" ImageUrl='<%# Eval("Image") %>' Height="100" Width="100" />
+                            </a>
+                            <br />
+                            <asp:Label ID="LabelItemName" runat="server" Text='<%# Eval("Main_item_names") %>'></asp:Label>
+                        </div>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+            <div id="related-items"></div>
+        </div>
+        <div id="footer">
+            <p>© 2024 RN MART. All rights reserved.</p>
+        </div>
+    </form>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Add to Cart button click handler
+        $(document).on('click', '.cart-button', function () {
+            var button = $(this);
+            var itemId = button.data('item-id');
+            var itemName = button.data('item-name');
+            var itemPrice = parseFloat(button.data('item-price'));
+
+            $.ajax({
+                type: "POST",
+                url: "Items_page.aspx/AddToCart",
+                data: JSON.stringify({ itemId: itemId, itemName: itemName, itemPrice: itemPrice }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    alert(response.d);
+                    button.hide();
+                    button.siblings('.quantity-controls').show();
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error adding item to cart: " + error);
+                }
+            });
+        });
+
+        // Show Cart Items button click handler
+        $('#cart-button').click(function () {
+            $.ajax({
+                type: "POST",
+                url: "Items_page.aspx/GetCartItems",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    var cartItems = response.d;
+                    var cartHtml = "<ul>";
+                    $.each(cartItems, function (index, item) {
+                        cartHtml += "<li>" + item.ItemName + " (Qty: " + item.Quantity + ") - " + item.ItemPrice + "</li>";
+                    });
+                    cartHtml += "</ul>";
+
+                    // Display the cart items (you can customize this to show in a modal, etc.)
+                    $('#cart-items').html(cartHtml);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error getting cart items: " + error);
+                }
+            });
+        });
+    });
+</script>
+
+<!-- Add this div to your Site1.master page where you want to display the cart items -->
+<div id="cart-items"></div>
+
+</body>
+</html>
+
+
+
